@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+
+model User {
+  id             String         @id() @unique @default(uuid())
+  created_at     DateTime       @default(now())
+  updated_at     DateTime       @updatedAt
+  email          String         @unique
+  first_name     String
+  last_name      String
+  password       String
+  username       String?        @unique
+  todos         Todo[]
+  addresses      Address[]
+  category      Category[]
+  menu            Menu[]
+  menu_option     MenuOption[]
+}
+ 
+  //  note the referrence id means the user_id that was used to create the todo links to the user table which have to be thesame 
+  // The user_id must match the id of a user in the User  table, establishing a relationship between the two models. This ensures that each todo is associated with the user who created it. ⬤
+  // how do you check the relationship you say   id:user_id
+
+
+model Todo {
+  id          String            @id() @unique @default(uuid())
+  created_at  DateTime          @default(now())
+  updated_at  DateTime          @updatedAt
+  name        String            
+  description String?
+  completed   Boolean          @default(false)
+  user_id     String
+  user        User?            @relation(fields: [user_id], references: [id])
+}
+
+model Address {
+  id      String  @id() @unique @default(uuid())
+  street  String
+  city    String
+  state   String
+  current Boolean @default(true)
+  zip     String
+  country String
+  user_id String
+  user    User?   @relation(fields: [user_id], references: [id])
+}
+
+model Category {
+  id      String @id() @unique @default(uuid())
+  name    String
+  menus   Menu[]
+  user_id String
+  user    User?  @relation(fields: [user_id], references: [id])
+}
+
+model Menu {
+  id             String           @id() @unique @default(uuid())
+  created_at     DateTime         @default(now())
+  updated_at     DateTime         @updatedAt
+  is_active      Boolean          @default(true)
+  is_available   Boolean          @default(true)
+  name           String
+  description    String
+  price          Float
+  category_id    String
+  image_url      String?
+  user_id        String
+  category       Category[]
+  menu_option    MenuOption[]
+  user            User           @relation(fields: [user_id], references: [id])
+}
+
+
+model MenuOption {
+  id            String           @id() @unique @default(uuid())
+  name          String
+  max_selection Int
+  required      Boolean          @default(false)
+  menu_id       String
+  user_id       String
+  menu          Menu?            @relation(fields: [menu_id], references: [id])
+  multiple_selection Boolean     @default(true)
+  user          User?            @relation(fields: [user_id], references: [id])
+}

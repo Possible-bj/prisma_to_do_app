@@ -1,0 +1,12 @@
+Finding an Existing Address: When you are querying to find an existing address, you can use the user_id directly in the where clause because it is a simple key-value pair. The Prisma findFirst method allows you to specify conditions directly:
+
+
+
+
+Updating an Existing Address: When you are updating an existing address, the where clause requires an object that specifies which record to update. In this case, you need to specify the id of the address you want to update:
+
+
+
+The question what do i use to create this menu option its the menu_id so use that to compare which i want this 
+menuoptionitem to belong to...if it is thesame before you can attach it under the menuoption
+
