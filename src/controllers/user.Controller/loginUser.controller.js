@@ -1,8 +1,8 @@
-import asyncHandler from "express-async-handler"
-import validator from "../../services/validationService.js"
-import prisma from "../../prisma/client.js"
-import bcrypt from "bcryptjs"
-import TokenService from "../../utils/Tokens/TokenService.js"
+import asyncHandler from "express-async-handler";
+import validator from "../../services/validationService.js";
+import prisma from "../../prisma/client.js";
+import bcrypt from "bcryptjs";
+import TokenService from "../../utils/Tokens/TokenService.js";
 
 /**
  * @openapi
@@ -114,50 +114,50 @@ import TokenService from "../../utils/Tokens/TokenService.js"
  *                   example: "Failed to log in user."
  */
 
+export const loginUser = asyncHandler(async (req, res) => {
+  const validation = await validator.validateObject(
+    {
+      email: "string|required",
+      password: "string|required",
+    },
+    { ...req.body }
+  );
 
-export const loginUser = asyncHandler(async(req,res)=>{
-    const validation = await validator.validateObject({
-        email : "string|required",
-        password:"string|required"
+  if (validation.error) {
+    res.status(400).json({ message: validation.error });
+    return;
+  }
 
-    },{...req.body})
+  const { email, password } = req.body;
+  const userExist = await prisma.user.findUnique({
+    where: {
+      email,
+    },
+  });
 
-    if(validation.error){
-        res.status(400).json({message: validation.error})
-        return;
-    }
-   
-    const {email, password} = req.body
-    const userExist = await prisma.user.findUnique({
-        where:{
-            email,
-        }
-    })
+  if (!userExist) {
+    res.status(404);
+    throw new Error("User not found");
+  }
 
-    if(!userExist){
-        res.status(404)
-        throw new Error('User not found')
-    }
+  // Bro the user used here is not from the database oo..its from the variable you declare to find unique..
+  // u did const userExist so u must check with userExist like that
+  const isMatch = await bcrypt.compare(password, userExist.password);
+  if (!isMatch) {
+    res.status(401);
+    throw new Error("Invalid credentials");
+  }
 
-    // Bro the user used here is not from the database oo..its from the variable you declare to find unique..
-    // u did const userExist so u must check with userExist like that
-    const isMatch = await bcrypt.compare(password,userExist.password);
-    if(!isMatch){
-        res.status(401)
-        throw new Error('Invalid credentials')
-    }
+  const tokenService = new TokenService();
+  const accessToken = await tokenService.generateAccessToken(userExist?.id);
+  const refreshToken = await tokenService.generateRefreshToken(userExist?.id);
 
-    const tokenService = new TokenService();
-    const accessToken = await tokenService.generateAccessToken(userExist?.id);
-    const refreshToken = await tokenService.generateRefreshToken(userExist?.id);
+  res.status(200).json({
+    error: false,
+    data: userExist,
+    accessToken,
+    refreshToken,
 
-    res.status(200).json({
-        error:false,
-        data:userExist,
-            accessToken,
-            refreshToken,
-        
-        message: 'User logged in successfully'
-    })
-
-})
+    message: "User logged in successfully",
+  });
+});

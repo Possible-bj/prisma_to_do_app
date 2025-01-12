@@ -1,9 +1,8 @@
-import asyncHandler from "express-async-handler"
-import validator from "../../services/validationService.js"
-import bcrypt from 'bcryptjs'
-import TokenService from "../../utils/Tokens/TokenService.js"
-import prisma  from "../../prisma/client.js"
-
+import asyncHandler from "express-async-handler";
+import validator from "../../services/validationService.js";
+import bcrypt from "bcryptjs";
+import TokenService from "../../utils/Tokens/TokenService.js";
+import prisma from "../../prisma/client.js";
 
 /**
  * @openapi
@@ -115,74 +114,60 @@ import prisma  from "../../prisma/client.js"
  *                   example: "Failed to register user."
  */
 
+export const createUser = asyncHandler(async (req, res) => {
+  const validation = await validator.validateObject(
+    {
+      username: "string|required",
+      email: "required|string",
+      first_name: "string|required",
+      last_name: "string|required",
+      password: "string|required",
+    },
+    { ...req?.body }
+  );
 
+  if (validation?.error) {
+    res.status(400).json({ message: validation.error });
+    return;
+  }
+  const { username, email, first_name, last_name, password } = req.body;
+  const userExist = await prisma.user.findFirst({
+    where: {
+      OR: [{ email }, { username }],
+    },
+  });
 
+  if (userExist) {
+    throw new Error("User already exists");
+  }
 
+  const hashedPassword = await bcrypt.hash(password, 10);
 
-export const createUser = asyncHandler(async(req,res)=>{
-    
-    const validation = await validator.validateObject({
-        username  :  "string|required",
-        email  :  "required|string"  ,     
-        first_name:  "string|required",
-        last_name  :  "string|required",
-        password  :  "string|required",
-        
-    }, {...req?.body})
-    
-    
-    if(validation?.error){
-        res.status(400).json({message: validation.error})
-        return;
-    }
-    const { username, email, first_name, last_name, password } = req.body;
-    const userExist = await prisma.user.findFirst({
-        where :{
-            OR:[
-                { email},
-                { username}
-            ]
-        }
-    })
+  const user = await prisma.user.create({
+    data: {
+      email,
+      first_name,
+      last_name,
+      password: hashedPassword,
+      username,
+    },
+  });
 
-    if(userExist){
+  if (!user) {
+    throw new Error("Failed to register user");
+  }
 
-        throw new Error('User already exists')
-    }
+  const tokenService = new TokenService();
+  const accessToken = await tokenService.generateAccessToken(user?.id);
+  const refreshToken = await tokenService.generateRefreshToken(user?.id);
 
-    const hashedPassword = await bcrypt.hash(password, 10)
+  res.status(201).json({
+    error: false,
+    data: user,
+    accessToken,
+    refreshToken,
 
-    const user = await prisma.user.create({
-        data:{
-            email,
-            first_name,
-            last_name,
-            password: hashedPassword,
-            username
-        }
-    })
-
-    if(!user){
-
-        throw new Error('Failed to register user')
-
-    }
-
-    const tokenService = new TokenService()
-    const accessToken = await tokenService.generateAccessToken(user?.id)
-    const refreshToken = await tokenService.generateRefreshToken(user?.id)
-
-    res.status(201).json({
-        error:false,
-        data:user,
-            accessToken,
-            refreshToken,
-        
-        status:true,
-        message: 'User registered successfully'
-    })
-
-
-})
-
-
+    status: true,
+    message: "User registered successfully",
+  });
+});

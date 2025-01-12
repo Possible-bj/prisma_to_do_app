@@ -1,6 +1,5 @@
-import asyncHandler from "express-async-handler"
-import prisma from "../../prisma/client.js"
-
+import asyncHandler from "express-async-handler";
+import prisma from "../../prisma/client.js";
 
 /**
  * @openapi
@@ -78,24 +77,19 @@ import prisma from "../../prisma/client.js"
  *                   example: "Failed to fetch users."
  */
 
+export const getAllUsers = asyncHandler(async (_req, res) => {
+  const users = await prisma.user.findMany({});
 
-export const getAllUsers = asyncHandler(async(_req,res)=>{
+  if (!users) {
+    res.status(404);
+    throw new Error("No users found");
+  }
 
-    const users = await prisma.user.findMany({})
-
-    if(!users){
-        res.status(404)
-        throw new Error("No users found")
-        
-    }
-
-    res.status(200).json({
-        errror:false,
-        data:{
-            users
-        },
-        message:"Users fetched successfully"
-    })
-
-
-})
+  res.status(200).json({
+    errror: false,
+    data: {
+      users,
+    },
+    message: "Users fetched successfully",
+  });
+});

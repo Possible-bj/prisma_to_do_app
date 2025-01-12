@@ -82,28 +82,24 @@ import prisma from "../../prisma/client.js";
  *                   example: "Failed to retrieve user."
  */
 
+export const getUserById = asyncHandler(async (req, res) => {
+  const { id } = req.params;
 
-export const getUserById = asyncHandler(async(req,res)=>{
+  const user = await prisma.user.findUnique({
+    where: {
+      id,
+    },
+  });
+  if (!user) {
+    res.status(404);
+    throw new Error("User not found");
+  }
 
-    const {id} = req.params;
-
-    const user = await prisma.user.findUnique({
-        where:{
-            id,
-        }
-    })
-    if(!user){
-        res.status(404)
-        throw new Error('User not found')
-    }
-
-    res.status(200).json({
-        error:false,
-        data:{
-            user
-        },
-        message:`user with ${id} retrieved successfully`
-
-    })
-
-})
+  res.status(200).json({
+    error: false,
+    data: {
+      user,
+    },
+    message: `user with ${id} retrieved successfully`,
+  });
+});
